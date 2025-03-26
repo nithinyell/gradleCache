@@ -1,34 +1,21 @@
-```
-#!/bin/bash
+✅ Add This Just Before Cache Save
+yaml
+Copy
+Edit
+- script: |
+    echo "Check if NDK path exists:"
+    echo "$(Build.SourcesDirectory)/android/ndk/26.1.10909125"
+    ls -la $(Build.SourcesDirectory)/android/ndk/26.1.10909125
+  displayName: 'Debug: Confirm NDK folder before caching'
+If this prints a valid folder structure, then we know the path is right, and we can trust the next step.
 
-set -e
-
-NDK_VERSION=26.1.10909125
-NDK_FOLDER=android-ndk-r26d
-NDK_ZIP=${NDK_FOLDER}-darwin.zip
-NDK_URL="https://dl.google.com/android/repository/$NDK_ZIP"
-INSTALL_DIR="$BUILD_SOURCESDIRECTORY/android/ndk/$NDK_VERSION"
-
-echo "📦 Downloading NDK $NDK_VERSION..."
-echo "👉 Target install dir: $INSTALL_DIR"
-
-# Clean any previous runs
-rm -rf "$INSTALL_DIR"
-rm -f "$BUILD_SOURCESDIRECTORY/$NDK_ZIP"
-
-# Download zip directly into the source directory
-curl -L -o "$BUILD_SOURCESDIRECTORY/$NDK_ZIP" "$NDK_URL"
-
-# Unzip right where we need it
-unzip -q "$BUILD_SOURCESDIRECTORY/$NDK_ZIP" -d "$BUILD_SOURCESDIRECTORY/android/ndk"
-
-# Rename the extracted folder to match versioned install dir
-mv "$BUILD_SOURCESDIRECTORY/android/ndk/$NDK_FOLDER" "$INSTALL_DIR"
-
-# Set ANDROID_NDK_HOME
-export ANDROID_NDK_HOME="$INSTALL_DIR"
-echo "##vso[task.setvariable variable=ANDROID_NDK_HOME]$ANDROID_NDK_HOME"
-
-echo "✅ NDK $NDK_VERSION installed at $INSTALL_DIR"
-
-```
+✅ Also Add This to Cache Task
+yaml
+Copy
+Edit
+- task: Cache@2
+  condition: and(always(), exists('$(Build.SourcesDirectory)/android/ndk/26.1.10909125'))
+  displayName: '💾 Save NDK to Cache'
+  inputs:
+    key: 'ndk | "$(Agent.OS)" | 26.1.10909125'
+    path: '$(Build.SourcesDirectory)/android/ndk/26.1.10909125'
