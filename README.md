@@ -1,68 +1,57 @@
+Import Buffer and fetch the PDF as an ArrayBuffer
+
 ```
-import React, { Component } from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { Buffer } from 'buffer';
 
-class ItemList extends Component {
-  constructor(props) {
-    super(props);
-    
-    this.state = {
-      items: [
-        { id: '1', name: 'Apple' },
-        { id: '2', name: 'Banana' },
-        { id: '3', name: 'Orange' },
-        { id: '4', name: 'Mango' },
-        { id: '5', name: 'Grapes' },
-      ]
-    };
-  }
+const url = 'https://example.com/my.pdf';
 
-  renderItem = ({ item }) => {
-    return (
-      <View style={styles.itemContainer}>
-        <Text style={styles.itemText}>{item.name}</Text>
-      </View>
-    );
-  };
-
-  render() {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.header}>Fruit List</Text>
-        <FlatList
-          data={this.state.items}
-          renderItem={this.renderItem}
-          keyExtractor={item => item.id}
-        />
-      </View>
-    );
+async function fetchPdfAsBase64(pdfUrl) {
+  try {
+    const response = await fetch(pdfUrl);
+    // In React Native >=0.64, fetch().arrayBuffer() is supported:
+    const arrayBuffer = await response.arrayBuffer();
+    // Convert ArrayBuffer to Base64
+    const base64String = Buffer.from(arrayBuffer).toString('base64');
+    return base64String;
+  } catch (err) {
+    console.error('Error fetching PDF:', err);
+    throw err;
   }
 }
+```
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  itemContainer: {
-    padding: 15,
-    marginBottom: 10,
-    backgroundColor: 'white',
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  itemText: {
-    fontSize: 18,
-  },
-});
+Pass the Base64 string into react-native-pdf
 
-export default ItemList;
+```
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
+import Pdf from 'react-native-pdf';
+
+export default function PdfViewer() {
+  const [base64Pdf, setBase64Pdf] = useState(null);
+
+  useEffect(() => {
+    fetchPdfAsBase64('https://example.com/my.pdf')
+      .then((b64) => setBase64Pdf(b64))
+      .catch((e) => console.warn(e));
+  }, []);
+
+  if (!base64Pdf) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  const source = { uri: `data:application/pdf;base64,${base64Pdf}` };
+
+  return (
+    <Pdf
+      source={source}
+      style={{ flex: 1 }}
+      onError={(e) => console.log('PDF load error:', e)}
+    />
+  );
+}
 ```
