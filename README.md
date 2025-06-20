@@ -3,6 +3,33 @@ import React from 'react';
 import { shallow } from 'enzyme';
 import AccountsListScreen from '../AccountsListScreen';
 
+// Mock react-redux connect (if used)
+jest.mock('react-redux', () => ({
+  connect: () => (Component) => Component,
+}));
+
+// Mock i18n/translate
+jest.mock('../../../../i18n', () => ({
+  translate: (key) => key, // return key as-is for testing
+}));
+
+// Mock actions (if needed)
+jest.mock('../../actions/voidCheque', () => ({
+  actions: {
+    getAccounts: jest.fn(),
+  },
+}));
+
+// Mock AccountsList component
+jest.mock('../../components/AccountsList', () => 'AccountsList');
+
+// Mock SearchBar component
+jest.mock('../../components/SearchBar', () => 'SearchBar');
+
+// Optional: mock NavigationHeader if needed
+jest.mock('../../components/NavigationHeader', () => 'NavigationHeader');
+
+
 describe('AccountsListScreen', () => {
   let wrapper;
   const mockNavigation = {
