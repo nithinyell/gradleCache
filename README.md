@@ -1,44 +1,67 @@
 ```
 
-import React from 'react';
-import { shallow } from 'enzyme';
-import PaymentInformationScreen from '../PaymentInformationScreen';
-
-describe('PaymentInformationScreen', () => {
-  const getBaseProps = (accountSource = 'MECH') => ({
-    route: {
-      params: { accountSource },
-    },
-    navigation: {
-      goBack: jest.fn(),
-      navigate: jest.fn(),
-    },
-    getPaymentInformation: jest.fn(),
-    getVoidChequeData: jest.fn(),
-    voidCheque: {
-      paymentInformation: {
-        body: {
-          SECURE: {
-            voidChequeAccountDetails: {
-              accountName: 'Test Name',
-              accountNumber: '123456',
-              currency: 'USD',
-              branchTransitNumber: '001',
-              financialInstitutionNumber: '123',
-              recipientName: 'John',
-              recipientAddress: '123 St',
-              recipientBank: 'BMO',
-              swiftBic: 'BMO123',
-              abaRoutingNumber: '011000138',
-              correspondentBank: 'JPM',
-              correspondentSwiftBic: 'JPM456',
-            },
-          },
-        },
+const paymentInformationMECHResponse = {
+  httpCode: 200,
+  body: {
+    SECURE: {
+      voidChequeAccountDetails: {
+        accountName: 'MECH INV 14',
+        accountNumber: '1716119',
+        branchTransitNumber: '021424',
+        recipientBank: 'BMO Bank N.A Head Office, Montreal',
+        correspondentBank: 'Wells Fargo Bank N.A New York',
+        correspondentBankStaticText: 'PNBPUS3NNYC',
+        recipientBankStaticText: 'To send wire payments in USD, use the following details.',
+        currency: 'USD',
+        financialInstitutionNumber: '001',
+        recipientName: 'BESS ACCOUNT 17',
+        recipientAddress: '123MCKINNEY ST\nTORONTO ONM 5C367 CANADA',
       },
     },
-  });
+  },
+};
 
+// Mock XIM response
+const paymentInformationXIMResponse = {
+  httpCode: 200,
+  body: {
+    SECURE: {
+      voidChequeAccountDetails: {
+        accountName: 'XIM INV 14',
+        accountNumber: '1895355',
+        recipientBank: 'BMO Bank N.A.\n328 South Canal Street\nChicago, IL 60606, USA',
+        abaRoutingNumber: '071000288',
+        recipientBankStaticText: 'HATRUS44XXX',
+        correspondentBankStaticText:
+          'To send domestic or international payments to this account, please use the following details:',
+        financialInstitutionNumber: '001',
+        recipientName: 'ALPINE TOTAL DYNAMIC DIVIDEND FUND',
+        recipientAddress: 'AAS7972 STREET (DIVISION STREET TO NORTH\nCHICAGO IL 60603',
+        recipientAccountNumber: '1895355',
+        swiftBic: 'HATRUS44XXX',
+      },
+    },
+  },
+};
+
+// Helper to get props by account type
+const getBaseProps = (accountSource = 'MECH') => ({
+  route: {
+    params: { accountSource },
+  },
+  navigation: {
+    goBack: jest.fn(),
+    navigate: jest.fn(),
+  },
+  getPaymentInformation: jest.fn(),
+  getVoidChequeData: jest.fn(),
+  voidCheque: {
+    paymentInformation:
+      accountSource === 'MECH' ? paymentInformationMECHResponse : paymentInformationXIMResponse,
+  },
+});
+
+describe('PaymentInformationScreen', () => {
   let wrapper;
   let props;
 
@@ -78,22 +101,30 @@ describe('PaymentInformationScreen', () => {
     const footer = shallow(wrapper.instance().renderFooter());
     const button = footer.findWhere(
       el => el.prop('onPress') && typeof el.prop('onPress') === 'function'
-    ).at(1); // second button with getVoidChequeData
+    ).at(1); // 2nd button (TouchableOpacity)
     button.prop('onPress')();
     expect(props.getVoidChequeData).toHaveBeenCalled();
   });
 
-  test('renders MECH payment instructions when accountSource is MECH', () => {
+  test('renders MECH payment instructions using actual mock data', () => {
     const rendered = shallow(wrapper.instance().renderPaymentInstructions());
-    expect(rendered.text()).toContain('VOID_CHEQUE.PaymentInstructions');
+    const text = rendered.text();
+
+    expect(text).toContain('VOID_CHEQUE.PaymentInstructions');
+    expect(text).toContain('MECH INV 14');
+    expect(text).toContain('Wells Fargo Bank');
     expect(rendered.find('PaymentInformationItem').length).toBeGreaterThan(0);
   });
 
-  test('renders XIM payment instructions when accountSource is XIM', () => {
+  test('renders XIM payment instructions using actual mock data', () => {
     const ximProps = getBaseProps('XIM');
     const ximWrapper = shallow(<PaymentInformationScreen {...ximProps} />);
     const rendered = shallow(ximWrapper.instance().renderPaymentInstructions());
-    expect(rendered.text()).toContain('VOID_CHEQUE.PaymentInstructions');
+
+    const text = rendered.text();
+    expect(text).toContain('VOID_CHEQUE.PaymentInstructions');
+    expect(text).toContain('XIM INV 14');
+    expect(text).toContain('ALPINE TOTAL DYNAMIC DIVIDEND FUND');
     expect(rendered.find('PaymentInformationItem').length).toBeGreaterThan(0);
   });
 });
