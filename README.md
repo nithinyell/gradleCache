@@ -1,20 +1,21 @@
 ```
 
-test('renders SearchBar and updates searchTerm on text change', () => {
+test('clears searchTerm on onClosePress', () => {
+  // Set initial state
+  wrapper.setState({ searchTerm: 'test' });
+
   const searchBarJSX = wrapper.instance().renderSearchBar();
   const viewWrapper = shallow(searchBarJSX);
 
-  // Grab the SearchBar (assumed to be first child)
+  // Grab the SearchBar component
   const searchBar = viewWrapper.children().first();
 
   expect(searchBar).toBeDefined();
-  expect(searchBar.prop('value')).toBe('');
 
-  // Simulate text input
-  searchBar.prop('onChangeText')('void');
-  expect(wrapper.state('searchTerm')).toBe('void');
+  // Simulate clear icon press
+  searchBar.prop('onClosePress')();
+  expect(wrapper.state('searchTerm')).toBe('');
 });
-
 
 
 ```
