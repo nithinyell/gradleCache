@@ -1,109 +1,32 @@
 ```
-import React from 'react';
-import { shallow } from 'enzyme';
-import AccountsListScreen from '../AccountsListScreen';
 
-// Mock react-redux connect (if used)
-jest.mock('react-redux', () => ({
-  connect: () => (Component) => Component,
-}));
+test('renders SearchBar and updates searchTerm on text change', () => {
+  const searchBarJSX = wrapper.instance().renderSearchBar();
 
-// Mock i18n/translate
-jest.mock('../../../../i18n', () => ({
-  translate: (key) => key, // return key as-is for testing
-}));
+  // shallow renders the outer <View> from renderSearchBar
+  const viewWrapper = shallow(searchBarJSX);
 
-// Mock actions (if needed)
-jest.mock('../../actions/voidCheque', () => ({
-  actions: {
-    getAccounts: jest.fn(),
-  },
-}));
+  // find SearchBar inside the view
+  const searchBar = viewWrapper.find('SearchBar');
+  expect(searchBar.exists()).toBe(true);
 
-// Mock AccountsList component
-jest.mock('../../components/AccountsList', () => 'AccountsList');
+  expect(searchBar.prop('value')).toBe('');
 
-// Mock SearchBar component
-jest.mock('../../components/SearchBar', () => 'SearchBar');
+  searchBar.prop('onChangeText')('void');
+  expect(wrapper.state('searchTerm')).toBe('void');
+});
 
-// Optional: mock NavigationHeader if needed
-jest.mock('../../components/NavigationHeader', () => 'NavigationHeader');
+test('clears searchTerm on onClosePress', () => {
+  wrapper.setState({ searchTerm: 'test' });
 
+  const searchBarJSX = wrapper.instance().renderSearchBar();
+  const viewWrapper = shallow(searchBarJSX);
+  const searchBar = viewWrapper.find('SearchBar');
 
-describe('AccountsListScreen', () => {
-  let wrapper;
-  const mockNavigation = {
-    goBack: jest.fn(),
-    navigate: jest.fn(),
-  };
+  expect(searchBar.exists()).toBe(true);
 
-  const mockProps = {
-    getAccounts: jest.fn(),
-    navigation: mockNavigation,
-    voidCheque: {
-      accounts: {
-        body: {
-          SECURE: {
-            voidChequeAccounts: [
-              { custAccName: 'Test Account', number: '123456' },
-              { custAccName: 'Another Account', number: '654321' },
-            ],
-          },
-        },
-      },
-    },
-  };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    wrapper = shallow(<AccountsListScreen {...mockProps} />);
-  });
-
-  test('calls getAccounts on componentDidMount', () => {
-    expect(mockProps.getAccounts).toHaveBeenCalled();
-  });
-
-  test('calls navigation.goBack on handleBack', () => {
-    wrapper.instance().handleBack();
-    expect(mockNavigation.goBack).toHaveBeenCalled();
-  });
-
-  test('renders SearchBar and updates searchTerm on text change', () => {
-    const searchBar = shallow(wrapper.instance().renderSearchBar()).find('SearchBar');
-    expect(searchBar.prop('value')).toBe('');
-    searchBar.prop('onChangeText')('void');
-    expect(wrapper.state('searchTerm')).toBe('void');
-  });
-
-  test('clears searchTerm on onClosePress', () => {
-    const searchBar = shallow(wrapper.instance().renderSearchBar()).find('SearchBar');
-    wrapper.setState({ searchTerm: 'test' });
-    searchBar.prop('onClosePress')();
-    expect(wrapper.state('searchTerm')).toBe('');
-  });
-
-  test('renders AccountsList with correct data', () => {
-    const accountListView = shallow(wrapper.instance().renderAccountList());
-    const accountsList = accountListView.find('AccountsList');
-    expect(accountsList.exists()).toBe(true);
-    expect(accountsList.prop('data')).toEqual(mockProps.voidCheque.accounts.body.SECURE.voidChequeAccounts);
-  });
-
-  test('navigates to PaymentInformationScreen on account item press', () => {
-    const accountItem = mockProps.voidCheque.accounts.body.SECURE.voidChequeAccounts[0];
-    const accountsList = shallow(wrapper.instance().renderAccountList()).find('AccountsList');
-    accountsList.prop('onPress')(accountItem);
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('VoidChequesStack', {
-      screen: 'PaymentInformationScreen',
-      params: accountItem,
-    });
-  });
-
-  test('renders NavigationHeader with translated title', () => {
-    const rendered = wrapper.render();
-    const header = shallow(rendered.props.children[0].props.children[0]);
-    expect(header.prop('navigationTitle')).toBe('VOID_CHEQUE.DownloadVoidCheques');
-  });
+  searchBar.prop('onClosePress')();
+  expect(wrapper.state('searchTerm')).toBe('');
 });
 
 
