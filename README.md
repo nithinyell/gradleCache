@@ -1,124 +1,70 @@
 ```
-
 import { testSaga } from 'redux-saga-test-plan';
-import * as saga from '../saga.voidCheque';
-import { actions } from '../../actions/voidCheque';
+import { getAccounts, getPaymentInformation, printVoidChequeData, downloadVoidChequeData } from '../../sagas/voidCheque.sagas';
+import * as api from '../../../api/voidChequeApi';
+import * as actions from '../../actions/voidChequeActions';
+import { call, select } from 'redux-saga/effects';
 
-describe('Void Cheque Sagas', () => {
-  const mockUserID = 'user123';
-  const mockCustomerID = 'cust456';
-  const mockAccessToken = 'token';
-  const mockIdToken = 'idToken';
-  const mockPrimary = 'CA';
-  const mockCountry = 'CA';
-  const label = 'VOID_CHEQUE.Cheque';
-  const mockAccountDetails = { accountNumber: '123' };
-  const voidChequeAccountsResponse = [{ accountNumber: '123' }];
-  const paymentInformationResponse = { paymentInstructions: {} };
+describe('VoidCheque Sagas', () => {
+  const mockState = {
+    auth: {
+      customerID: '123',
+      userID: 'abc',
+      idToken: 'idToken',
+      oauthAccessToken: 'oauthAccessToken'
+    },
+    voidCheque: {
+      primaryRelationship: 'CA',
+      countryCode: 'US'
+    }
+  };
 
-  test('getAccounts saga - success', () => {
-    testSaga(saga.getAccounts)
-      .next()
-      .select(expect.any(Function))
-      .next(mockCustomerID)
-      .select(expect.any(Function))
-      .next(mockUserID)
-      .select(expect.any(Function))
-      .next(mockAccessToken)
-      .select(expect.any(Function))
-      .next(mockIdToken)
-      .select(expect.any(Function))
-      .next({ primaryRelationship: mockPrimary, countryCode: mockCountry })
-      .call(expect.any(Function), mockCustomerID, mockUserID, mockAccessToken, mockIdToken)
-      .next(voidChequeAccountsResponse)
-      .put(actions.setAccounts(voidChequeAccountsResponse, label))
-      .next()
-      .isDone();
+  const accountDetails = { accountNumber: '0001' };
+
+  describe('getAccounts', () => {
+    it('should handle getAccounts success flow', () => {
+      testSaga(getAccounts)
+        .next()
+        .select(expect.any(Function)).next(mockState.auth)
+        .select(expect.any(Function)).next(mockState.voidCheque)
+        .call(api.sendVoidChequeNavigationActivity, '123', 'abc', 'oauthAccessToken', 'idToken')
+        .call(api.getAccounts, '123', 'abc', 'oauthAccessToken', 'idToken')
+        .put(actions.setAccountsFromResponse(expect.any(Object)))
+        .isDone();
+    });
   });
 
-  test('getAccounts saga - failure', () => {
-    const error = new Error('fail');
-    testSaga(saga.getAccounts)
-      .next()
-      .throw(error)
-      .put(actions.setAccountsError(true))
-      .next()
-      .isDone();
+  describe('getPaymentInformation', () => {
+    it('should handle success', () => {
+      testSaga(getPaymentInformation, { accountDetails })
+        .next()
+        .select(expect.any(Function)).next(mockState.auth)
+        .call(api.getPaymentInformation, '123', 'abc', 'oauthAccessToken', 'idToken', accountDetails)
+        .put(actions.setPaymentInformationFromResponse(expect.any(Object)))
+        .isDone();
+    });
   });
 
-  test('getPaymentInformation saga - success', () => {
-    testSaga(saga.getPaymentInformation, { accountDetails: mockAccountDetails })
-      .next()
-      .select(expect.any(Function))
-      .next(mockUserID)
-      .select(expect.any(Function))
-      .next(mockIdToken)
-      .select(expect.any(Function))
-      .next(mockAccessToken)
-      .call(expect.any(Function), mockAccountDetails, mockUserID, mockAccessToken, mockIdToken)
-      .next(paymentInformationResponse)
-      .put(actions.setPaymentInformation(paymentInformationResponse))
-      .next()
-      .isDone();
+  describe('printVoidChequeData', () => {
+    it('should call printVoidCheque API', () => {
+      testSaga(printVoidChequeData, { accountDetails })
+        .next()
+        .select(expect.any(Function)).next(mockState.auth)
+        .call(api.printVoidChequeData, '123', 'abc', 'oauthAccessToken', 'idToken', accountDetails)
+        .put(actions.setVoidChequePrintResponse(expect.any(Object)))
+        .isDone();
+    });
   });
 
-  test('getPaymentInformation saga - failure', () => {
-    const error = new Error('fail');
-    testSaga(saga.getPaymentInformation, { accountDetails: mockAccountDetails })
-      .next()
-      .throw(error)
-      .put(actions.setPaymentInformationError(true))
-      .next()
-      .isDone();
-  });
-
-  test('printVoidChequeData saga - success', () => {
-    testSaga(saga.printVoidChequeData, { accountDetails: mockAccountDetails })
-      .next()
-      .select(expect.any(Function))
-      .next(mockUserID)
-      .select(expect.any(Function))
-      .next(mockIdToken)
-      .select(expect.any(Function))
-      .next(mockAccessToken)
-      .call(expect.any(Function), mockAccountDetails, mockCustomerID, mockUserID, mockAccessToken, mockIdToken)
-      .next({ SECURE: { downloadedPdf: 'base64data' } })
-      .put(actions.setVoidChequeData({ downloadedPdf: 'base64data' }))
-      .next()
-      .isDone();
-  });
-
-  test('printVoidChequeData saga - failure', () => {
-    const error = new Error('fail');
-    testSaga(saga.printVoidChequeData, { accountDetails: mockAccountDetails })
-      .next()
-      .throw(error)
-      .put(actions.setVoidChequeDataError(true))
-      .next()
-      .isDone();
-  });
-
-  test('downloadVoidChequeData saga - success', () => {
-    testSaga(saga.downloadVoidChequeData, { accountDetails: mockAccountDetails })
-      .next()
-      .select(expect.any(Function))
-      .next(mockUserID)
-      .select(expect.any(Function))
-      .next(mockIdToken)
-      .select(expect.any(Function))
-      .next(mockAccessToken)
-      .call(expect.any(Function), mockAccountDetails, mockCustomerID, mockUserID, mockAccessToken, mockIdToken)
-      .next()
-      .isDone();
-  });
-
-  test('downloadVoidChequeData saga - failure', () => {
-    const error = new Error('fail');
-    testSaga(saga.downloadVoidChequeData, { accountDetails: mockAccountDetails })
-      .next()
-      .throw(error)
-      .next()
-      .isDone();
+  describe('downloadVoidChequeData', () => {
+    it('should call downloadVoidCheque API', () => {
+      testSaga(downloadVoidChequeData, { accountDetails })
+        .next()
+        .select(expect.any(Function)).next(mockState.auth)
+        .call(api.downloadVoidChequeData, '123', 'abc', 'oauthAccessToken', 'idToken', accountDetails)
+        .call(expect.any(Function)) // savePdf call
+        .isDone();
+    });
   });
 });
 ```
