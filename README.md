@@ -4,24 +4,21 @@ import {
   getAccounts,
   getPaymentInformation,
   printVoidChequeData,
-  downloadVoidChequeData,
+  downloadVoidChequeData
 } from '../../sagas/voidCheque.sagas';
 import * as api from '../../../api/voidChequeApi';
 import * as actions from '../../actions/voidChequeActions';
 
-describe('voidCheque sagas (no selectors, no redux state)', () => {
+describe('voidCheque sagas', () => {
   const customerID = '123';
   const userID = 'abc';
   const accessToken = 'mockAccess';
   const idToken = 'mockId';
-  const label = 'VOID_CHEQUE.Cheque';
-  const accountDetails = { accountNumber: '0001' };
+  const accountDetails = { accountNumber: '001' };
   const mockResponse = { data: 'mockData' };
 
   test('getAccounts saga success', () => {
     testSaga(getAccounts)
-      .next()
-      .call(api.sendVoidChequeNavigationActivity, customerID, userID)
       .next()
       .call(api.getAccounts, customerID, userID, accessToken, idToken)
       .next(mockResponse)
@@ -55,7 +52,7 @@ describe('voidCheque sagas (no selectors, no redux state)', () => {
       .next()
       .call(api.downloadVoidChequeData, customerID, userID, accessToken, idToken, accountDetails)
       .next(mockResponse)
-      .call(expect.any(Function), mockResponse) // e.g. savePDF
+      .call(expect.any(Function), mockResponse)  // usually savePDF or RNBlob
       .next()
       .isDone();
   });
