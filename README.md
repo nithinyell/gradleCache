@@ -1,60 +1,88 @@
 ```
 import { testSaga } from 'redux-saga-test-plan';
 import {
-  getAccounts,
-  getPaymentInformation,
-  printVoidChequeData,
-  downloadVoidChequeData
-} from '../../sagas/voidCheque.sagas';
-import * as api from '../../../api/voidChequeApi';
-import * as actions from '../../actions/voidChequeActions';
+    getAccountsSaga,
+    getPaymentInformationSaga,
+    printVoidChequeDataSaga,
+    downloadVoidChequeDataSaga,
+    getVoidChequeLabel
+} from '../voidCheque';
+import * as api from '../../api/voidCheque';
+import * as actions from '../actions/voidCheque';
 
 describe('voidCheque sagas', () => {
-  const customerID = '123';
-  const userID = 'abc';
-  const accessToken = 'mockAccess';
-  const idToken = 'mockId';
-  const accountDetails = { accountNumber: '001' };
-  const mockResponse = { data: 'mockData' };
+    const customerID = '123';
+    const userID = 'abc';
+    const accessToken = 'mockAccess';
+    const idToken = 'mockId';
+    const accountDetails = { accountNumber: '001', accountId: 'acc123' };
+    const primaryRelationship = 'primary';
+    const countryCode = 'CA';
+    const mockResponse = { data: 'mockData' };
+    const mockLabel = 'Void Cheque Label';
 
-  test('getAccounts saga success', () => {
-    testSaga(getAccounts)
-      .next()
-      .call(api.getAccounts, customerID, userID, accessToken, idToken)
-      .next(mockResponse)
-      .put(actions.setAccountsFromResponse(mockResponse))
-      .next()
-      .isDone();
-  });
+    beforeEach(() => {
+        // Mock the selector responses
+        jest.spyOn(select, 'default').mockImplementation((selector) => {
+            if (selector === state => state.auth) {
+                return { customerID, userID, primaryRelationship, countryCode };
+            }
+            if (selector === state => state.voidCheque) {
+                return { oauthAccessToken: accessToken, idToken };
+            }
+            return null;
+        });
+    });
 
-  test('getPaymentInformation saga success', () => {
-    testSaga(getPaymentInformation, { accountDetails })
-      .next()
-      .call(api.getPaymentInformation, customerID, userID, accessToken, idToken, accountDetails)
-      .next(mockResponse)
-      .put(actions.setPaymentInformationFromResponse(mockResponse))
-      .next()
-      .isDone();
-  });
+    afterEach(() => {
+        select.default.mockRestore();
+    });
 
-  test('printVoidChequeData saga success', () => {
-    testSaga(printVoidChequeData, { accountDetails })
-      .next()
-      .call(api.printVoidChequeData, customerID, userID, accessToken, idToken, accountDetails)
-      .next(mockResponse)
-      .put(actions.setVoidChequePrintResponse(mockResponse))
-      .next()
-      .isDone();
-  });
+    test('getAccounts saga success', () => {
+        testSaga(getAccountsSaga)
+            .next()
+            .select(state => state.auth)
+            .next({ customerID, userID, primaryRelationship, countryCode })
+            .select(state => state.voidCheque)
+            .next({ oauthAccessToken: accessToken, idToken })
+            .call(api.getAccounts, customerID, userID, accessToken, idToken)
+            .next(mockResponse)
+            .call(getVoidChequeLabel, primaryRelationship, countryCode)
+            .next(mockLabel)
+            .call(api.sendNavigationsUserActivity, mockLabel)
+            .next()
+            .put(actions.setAccounts(mockResponse, mockLabel))
+            .next()
+            .isDone();
+    });
 
-  test('downloadVoidChequeData saga success', () => {
-    testSaga(downloadVoidChequeData, { accountDetails })
-      .next()
-      .call(api.downloadVoidChequeData, customerID, userID, accessToken, idToken, accountDetails)
-      .next(mockResponse)
-      .call(expect.any(Function), mockResponse)  // usually savePDF or RNBlob
-      .next()
-      .isDone();
-  });
+    test('getPaymentInformation saga success', () => {
+        testSaga(getPaymentInformationSaga, { accountDetails })
+            .next()
+            .select(state => state.auth)
+            .next({ customerID, userID })
+            .select(state => state.voidCheque)
+            .next({ oauthAccessToken: accessToken, idToken })
+            .call(api.getPaymentInformation, customerID, userID, accessToken, idToken, accountDetails.accountId)
+            .next(mockResponse)
+            .put(actions.setPaymentInformation(mockResponse))
+            .next()
+            .isDone();
+    });
+
+    test('getAccounts saga failure', () => {
+        const error = new Error('Failed');
+        testSaga(getAccountsSaga)
+            .next()
+            .select(state => state.auth)
+            .next({ customerID, userID, primaryRelationship, countryCode })
+            .select(state => state.voidCheque)
+            .next({ oauthAccessToken: accessToken, idToken })
+            .call(api.getAccounts, customerID, userID, accessToken, idToken)
+            .throw(error)
+            .put(actions.setAccountsError(true))
+            .next()
+            .isDone();
+    });
 });
 ```
