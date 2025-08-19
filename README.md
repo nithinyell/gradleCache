@@ -1,194 +1,52 @@
 ```
-import { testSaga } from 'redux-saga-test-plan';
-import {
-  getAccountsSaga,
-  getPaymentInformationSaga,
-  printVoidChequeDataSaga,
-  downloadVoidChequeDataSaga,
-} from '../../../src/sagas/voidCheque';
-import * as api from '../../../src/api';
-import * as actions from '../../../src/actions/voidChequeActions';
-import { sendNavigationUserActivity, saveBase64PDF } from '../../../src/utils/utils';
+<ListItem
+      icon
+      last
+      onPress={onPress}
+      style={styles.itemStyle}
+      accessible
+      focusable
+      // 👉 role matches your screenshot
+      accessibilityRole={depositCheque ? 'link' : 'button'}
+      accessibilityLabel={a11yLabel}
+      accessibilityHint={
+        depositCheque
+          ? (Platform.OS === 'android' ? 'opens in web browser' : undefined)
+          : undefined
+      }
+    >
+      <Left style={styles.itemIconStyle}>
+        {zelleTransfer
+          ? <Image source={source} style={{ height: 25, width: 25 }} />
+          : <Image source={source} />
+        }
+      </Left>
 
-describe('voidCheque sagas', () => {
-  const auth = {
-    customerID: 'cust1',
-    userID: 'user1',
-    primaryRelationship: 'USA',
-    countryCode: 'USD',
-  };
+      {/* Make parent the only accessible node */}
+      <Body
+        style={styles.itemBodyStyle}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <View style={styles.titleAndCountContainer}>
+          <Text style={styles.textStyle} numberOfLines={2}>{text}</Text>
+          {typeof count === 'string' && count.length > 0 ? (
+            <View style={styles.approvalCountContainer}>
+              <Text>{count}</Text>
+            </View>
+          ) : null}
+        </View>
 
-  const voidCheque = {
-    oauthAccessToken: 'token123',
-    idToken: 'id123',
-  };
+        {zelleTransfer ? (
+          <View style={{ flexDirection: 'row', marginTop: 8 }}>
+            <Text style={styles.textStyleItalic}>{'›'}</Text>
+          </View>
+        ) : null}
 
-  // ---------- ✅ getAccountsSaga ----------
-  describe('getAccountsSaga', () => {
-    const mockResponse = { data: 'mockData' };
-    const label = 'VOID_CHEQUE_Cheque';
-
-    test('success', () => {
-      testSaga(getAccountsSaga)
-        .next()
-        .next({ customerID: auth.customerID, userID: auth.userID })
-        .next(voidCheque)
-        .call(
-          api.getAccounts,
-          auth.customerID,
-          auth.userID,
-          voidCheque.oauthAccessToken,
-          voidCheque.idToken
-        )
-        .next(mockResponse)
-        .next({
-          primaryRelationship: auth.primaryRelationship,
-          countryCode: auth.countryCode,
-        })
-        .call(
-          api.getVoidChequeLabel,
-          auth.primaryRelationship,
-          auth.countryCode
-        )
-        .next(label)
-        .call(sendNavigationUserActivity, label)
-        .next()
-        .put(actions.setAccountsFromResponse(mockResponse, label))
-        .next()
-        .isDone();
-    });
-
-    test('failure', () => {
-      const error = new Error('API failed');
-      testSaga(getAccountsSaga)
-        .next()
-        .next({ customerID: auth.customerID, userID: auth.userID })
-        .next(voidCheque)
-        .call(
-          api.getAccounts,
-          auth.customerID,
-          auth.userID,
-          voidCheque.oauthAccessToken,
-          voidCheque.idToken
-        )
-        .throw(error)
-        .put(actions.setAccountsError(true))
-        .next()
-        .isDone();
-    });
-  });
-
-  // ---------- ✅ getPaymentInformationSaga ----------
-  describe('getPaymentInformationSaga', () => {
-    const action = { accountDetails: { accId: '123' } };
-    const mockResponse = { data: 'PaymentInfoData' };
-
-    test('success', () => {
-      testSaga(getPaymentInformationSaga, action)
-        .next()
-        .next({ customerID: auth.customerID, userID: auth.userID })
-        .next(voidCheque)
-        .call(
-          api.getPaymentInformation,
-          auth.customerID,
-          auth.userID,
-          voidCheque.oauthAccessToken,
-          voidCheque.idToken,
-          action.accountDetails
-        )
-        .next(mockResponse)
-        .put(actions.setPaymentInformation(mockResponse))
-        .next()
-        .isDone();
-    });
-
-    test('failure', () => {
-      const error = new Error('Something went wrong');
-      testSaga(getPaymentInformationSaga, action)
-        .next()
-        .next({ customerID: auth.customerID, userID: auth.userID })
-        .next(voidCheque)
-        .throw(error)
-        .put(actions.setPaymentInformationError(true))
-        .next()
-        .isDone();
-    });
-  });
-
-  // ---------- ✅ printVoidChequeDataSaga ----------
-  describe('printVoidChequeDataSaga', () => {
-    const action = { accountDetails: { accId: '456' } };
-    const mockPrintResponse = { SECURE: { downloadPdf: 'mockPDFdata' } };
-
-    test('success', () => {
-      testSaga(printVoidChequeDataSaga, action)
-        .next()
-        .next({ customerID: auth.customerID, userID: auth.userID })
-        .next(voidCheque)
-        .call(
-          api.printVoidChequeData,
-          auth.customerID,
-          auth.userID,
-          voidCheque.oauthAccessToken,
-          voidCheque.idToken,
-          action.accountDetails
-        )
-        .next(mockPrintResponse)
-        .call(
-          api.downloadVoidChequeData,
-          'mockPDFdata'
-        )
-        .next()
-        .isDone();
-    });
-
-    test('failure', () => {
-      const error = new Error('Print failed');
-      testSaga(printVoidChequeDataSaga, action)
-        .next()
-        .next({ customerID: auth.customerID, userID: auth.userID })
-        .next(voidCheque)
-        .throw(error)
-        .put(actions.setVoidChequeDataError(true))
-        .next()
-        .isDone();
-    });
-  });
-
-  // ---------- ✅ downloadVoidChequeDataSaga ----------
-  describe('downloadVoidChequeDataSaga', () => {
-    const action = { accountDetails: { accId: '789' } };
-    const mockDownloadResponse = { SECURE: { downloadPdf: 'base64-pdf' } };
-
-    test('success', () => {
-      testSaga(downloadVoidChequeDataSaga, action)
-        .next()
-        .next({ customerID: auth.customerID, userID: auth.userID })
-        .next(voidCheque)
-        .call(
-          api.downloadVoidChequeData,
-          auth.customerID,
-          auth.userID,
-          voidCheque.oauthAccessToken,
-          voidCheque.idToken,
-          action.accountDetails
-        )
-        .next(mockDownloadResponse)
-        .call(saveBase64PDF, 'base64-pdf')
-        .next()
-        .isDone();
-    });
-
-    test('failure', () => {
-      const error = new Error('Download failed');
-      testSaga(downloadVoidChequeDataSaga, action)
-        .next()
-        .next({ customerID: auth.customerID, userID: auth.userID })
-        .next(voidCheque)
-        .throw(error)
-        .next()
-        .isDone();
-    });
-  });
-});
+        {/* keep your existing trailing text */}
+        <Text style={styles.textStyle}>
+          {depositCheque ? (Platform.OS === 'ios' ? 'link' : 'button') : null}
+        </Text>
+      </Body>
+    </ListItem>
 ```
